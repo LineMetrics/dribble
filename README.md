@@ -44,12 +44,12 @@ Next, configure an algorithm in *dribble* DSL. Note, quoted 'atoms' represent us
 Algo = {algorithm, [
     {flows, [                                               %% input endpoints, either public or internal
         {'cep_in', public,
-            [{branch, ['check_downtime', 'check_uptime']
+            [{branch, ['check_downtime', 'check_uptime']}]
         },
         {'check_downtime', internal,
             [{filter, 'is_downtime_ap', {fn, IsUptime}},    %% where data.uptime = -1 && data.logical_group = "ap"
              {transform, 'to_alert',    {fn, ToAlert}},     %% converts to notification payload
-             {branch, [{box, 'populate_parent', data_in}]}]
+             {box, 'populate_parent', data_in}]
         },
         {'check_downtime-cont', internal,                   %% continuation flow for 'populate_parent'
             [{branch, ['stabilizer']}]
@@ -65,22 +65,24 @@ Algo = {algorithm, [
         }
     ]},
 
-    %% define boxes with their implementation module, in/out ports, initial config
-    {boxes, [
-        {'populate_parent', [
-            {impl, populate_parent_op}
-            {in,   [data_in]},                              %% input port
-            {out,  [{data_out, 'check_downtime-cont'}]},    %% output port pointing to 'check_downtime-cont' pipe
-            {with, [{evict_every, 3600000}]}
-        ]}
-    ]},
+    {plugin_defs, [
+        %% define boxes with their implementation module, in/out ports, initial config
+        {box, [
+            {'populate_parent', [
+                {impl, populate_parent_op},
+                {in,   [data_in]},                              %% input port
+                {out,  [{data_out, 'check_downtime-cont'}]},    %% output port pointing to 'check_downtime-cont' pipe
+                {with, [{evict_every, 3600000}]}
+            ]}
+        ]},
 
-    %% For windows, split up the parent flow and insert window flow
-    {windows, [
-        {'stabilizer_win', [
-            {type, eep_window_tumbling},
-            {size, 30000},
-            {group_by, {fn, Getter([device_id])}}
+        %% For windows, split up the parent flow and insert window flow
+        {window, [
+            {'stabilizer_win', [
+                {type, eep_window_tumbling},
+                {size, 30000},
+                {group_by, {fn, Getter([device_id])}}
+            ]}
         ]}
     ]}
 ]}.
