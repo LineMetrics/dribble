@@ -119,7 +119,7 @@ Implementation
 Pipes, branches, transforms and filters have a 1-to-1 mapping with beam constructs.
 
 Generic `boxes` require additional internal flows:
-```
+``` erlang
     {'populate_parent-data_in',  internal, [{transform, 'enqueue', {fn, BoxEnqueue}},
                                             {branch, ['populate_parent-data_out']}]},
     {'populate_parent-data_out', internal, [{filter, 'is_data_out', {fn, PortMatches(data_out)}},
@@ -127,7 +127,7 @@ Generic `boxes` require additional internal flows:
 ```
 
 `windows` require new flows and re-wiring of 'stabilizer' flow:
-```
+``` erlang
     {'stabilizer',          internal, [{branch, ['stabilizer_win-in']}]},
     {'stabilizer-cont',     internal, [{sink, output_sink}]},
     {'stabilizer_win-in1',  internal, [{transform, 'stabilizer_win-enqueue', {fn, WindowEqueue}},
