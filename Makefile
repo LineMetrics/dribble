@@ -1,20 +1,23 @@
+rebar=$(shell [ -f ./rebar ] && echo "./rebar" || echo "rebar")
+relx=$(shell [ -f ./relx ] && echo "./relx" || echo "relx")
+
 all: erl test
 
 erl:
-	rebar get-deps compile
+	${rebar} get-deps compile
 
 test: all
-	rebar skip_deps=true compile ct
+	${rebar} skip_deps=true compile ct
 
 clean:
-	rebar clean
-	rebar -rm -rvf deps ebin doc
+	${rebar} clean
+	${rebar} -rm -rvf deps ebin doc
 
 dialyzer:
 	dialyzer --verbose --plts .plt --src src -r ebin
 
 doc:
-	rebar doc
+	${rebar} doc
 
 build-plt:
 	dialyzer --build_plt --output_plt .plt --apps kernel stdlib erts
