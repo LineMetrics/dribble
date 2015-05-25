@@ -23,7 +23,7 @@ resolve({algorithm, {flows,Flows}, {plugin_defs,PluginDefs}}) ->
     {algorithm, Flows2}.
 
 rewire({algorithm, {flows,_Flows}, {plugin_defs,_}}) ->
-    % rewire till no change
+    % foldl: rewire plugin instances within the flow
     throw(unimplemented).
 
 build({algorithm, {flows,_Flows}, {plugin_defs,_}}) ->
