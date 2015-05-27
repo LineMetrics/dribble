@@ -102,7 +102,7 @@ Where:
 Other examples
 --------------
 
-For more examples, check out [test/dribble_examples_SUITER.erl](https://github.com/konrads/dribble/blob/master/test/dribble_examples_SUITE.erl).
+For more examples, check out [test/dribble_examples_SUITE.erl](https://github.com/konrads/dribble/blob/master/test/dribble_examples_SUITE.erl).
 
 
 Implementation
