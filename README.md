@@ -136,8 +136,6 @@ Algorithm construction requires multiple passes, eg.
 TBD
 ---
 
-Clock ticks in OTP app - should they be part of algorithm, driven externally?
-
-System events - should be done on the OTP app layer. Processes at that level have access to the flow (for eg. `tick`) and beam context (for eg. hinted handoff)
-
-beam_flow:minimize/optimize/flatten() - denormalize 1-to-1 branches into single pipes, for speed
+* Clock ticks in OTP app - should they be part of algorithm, driven externally?
+* System events - should be done on the OTP app layer. Processes at that level have access to the flow (for eg. `tick`) and beam context (for eg. hinted handoff)
+* beam_flow:minimize/optimize/flatten() - denormalize 1-to-1 branches into single pipes, for speed
