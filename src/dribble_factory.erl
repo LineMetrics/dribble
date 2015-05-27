@@ -1,9 +1,9 @@
 -module(dribble_factory).
 
--export([to_beam/1]).
--export([resolve/1]).
--export([rewire/1]).
--export([build/1]).
+-export([
+    to_beam/1,
+    resolve/1,   %% FIXME: remove
+    rewire/1]).  %% FIXME: remove
 
 -include("dribble_int.hrl").
 
@@ -11,24 +11,26 @@ to_beam(Algo) ->
     % pre-validate
     dribble_validator:pre_validate(Algo),
     % map: plugin references -> {ref, impl, init_spec}
-    Algo2 = resolve(Algo),
+    Flows = resolve(Algo),
     % foldl: change every instance of {ref, impl, init_spec} to filter|transform|branch
-    Algo3 = rewire(Algo2),
+    Flows2 = rewire(Flows),
     % build actual beam_flow network
-    build(Algo3).
+    dribble_beam:build(Flows2).
 
 resolve({algorithm, {flows,Flows}, {plugin_defs,PluginDefs}}) ->
     % map flow components to rewirables
-    Flows2 = [ resolve_flow(F, PluginDefs) || F <- Flows ],
-    {algorithm, Flows2}.
+    [ resolve_flow(F, PluginDefs) || F <- Flows ].
+    
 
-rewire({algorithm, {flows,_Flows}, {plugin_defs,_}}) ->
-    % foldl: rewire plugin instances within the flow
-    throw(unimplemented).
-
-build({algorithm, {flows,_Flows}, {plugin_defs,_}}) ->
-    % build beam network
-    throw(unimplemented).
+rewire(Flows) ->
+    case find_plugin_in_flows(Flows) of
+        none ->
+            Flows;
+        {FlowId, [{ref, Ref},
+                  {impl, ImplMod},
+                  {init_spec, InitSpec}]} ->
+            ImplMod:rewire(Ref, InitSpec, FlowId, Flows)
+    end.
 
 %% internal
 resolve_flow({FlowId, Visibility, Pipe}, PluginDefs) when Visibility == public; Visibility == internal ->
@@ -40,8 +42,8 @@ resolve_pipe_element({filter, Label, Exec}, _PluginDefs) ->
 resolve_pipe_element({transform, Label, Exec}, _PluginDefs) ->
     {beam_transform, Label, wrap_ctx(Exec)};
 resolve_pipe_element({sink, SinkId}, _PluginDefs) ->
-    {beam_transform, {sink, SinkId}, sink_transform(SinkId)};
-resolve_pipe_element({branch, Branches}=Branch, _PluginDefs) when is_list(Branches) -> Branch;
+    {beam_transform, {sink, SinkId}, {fn, sink_transform(SinkId)}};
+resolve_pipe_element({branch, Branches}, _PluginDefs) when is_list(Branches) -> {beam_branch, Branches};
 resolve_pipe_element(Plugin, PluginDefs) ->
     {Impl, InitSpec} = resolve_plugin(Plugin, PluginDefs),
     {plugin, [{ref, Plugin}, {impl, Impl}, {init_spec, InitSpec}]}.
@@ -62,10 +64,10 @@ resolve_plugin(Plugin, PluginDefs) ->
     end.
 
 sink_transform(SinkId) ->
-    fun(X, #dribble_ctx{sinks=Sinks}=Ctx) ->
-        Sinks2 = dict:store(SinkId, X, Sinks),
+    fun(X, #dribble_runtime{sinks=Sinks}=Runtime) ->
+        Sinks2 = dribble_maps:put(SinkId, X, Sinks),
         Res = {sinked,SinkId},
-        {Res, Ctx#dribble_ctx{sinks=Sinks2}}
+        {Res, Runtime#dribble_runtime{sinks=Sinks2}}
     end.
 
 wrap_ctx({fn, Fun}) -> 
@@ -73,12 +75,22 @@ wrap_ctx({fn, Fun}) ->
     case N of
         1 -> {fn, Fun};  % no ctx passing
         2 ->
-            Fun2 = fun(X, #dribble_ctx{generic=GenericCtx}=Ctx) ->
+            Fun2 = fun(X, #dribble_runtime{generic=GenericCtx}=Runtime) ->
                 {X2, GenericCtx2} = Fun(X, GenericCtx),
-                {X2, Ctx#dribble_ctx{generic=GenericCtx2}}
+                {X2, Runtime#dribble_runtime{generic=GenericCtx2}}
             end,
             {fn, Fun2}
     end;
 wrap_ctx({mfa, _M,_F,_A}) ->
     throw('unimplemented, needs a beam_flow conversion func for ctx param'). 
 
+find_plugin_in_flows([]) -> none;
+find_plugin_in_flows([{_Label, _Vis, Pipe} | Rest]) ->
+    case find_plugin_in_pipe(Pipe) of
+        none -> find_plugin_in_flows(Rest);
+        Plugin -> Plugin
+    end.
+
+find_plugin_in_pipe([]) -> none;
+find_plugin_in_pipe([{plugin, _}=Plugin | _]) -> Plugin;
+find_plugin_in_pipe([_ | Rest]) -> find_plugin_in_pipe(Rest).

@@ -49,10 +49,7 @@ Algo = {algorithm, [
         {'check_downtime', internal,
             [{filter, 'is_downtime_ap', {fn, IsUptime}},    %% where data.uptime = -1 && data.logical_group = "ap"
              {transform, 'to_alert',    {fn, ToAlert}},     %% converts to notification payload
-             {box, 'populate_parent', data_in}]
-        },
-        {'check_downtime-cont', internal,                   %% continuation flow for 'populate_parent'
-            [{branch, ['stabilizer']}]
+             {branch, ['stabilizer']}]
         },
         {'check_uptime', internal,
             [{filter, 'is_uptime_ap',   {fn, IsDowntime}},  %% where data.uptime = 0 && data.logical_group = "ap"
@@ -66,16 +63,6 @@ Algo = {algorithm, [
     ]},
 
     {plugin_defs, [
-        %% define boxes with their implementation module, in/out ports, initial config
-        {box, [
-            {'populate_parent', [
-                {impl, populate_parent_op},
-                {in,   [data_in]},                              %% input port
-                {out,  [{data_out, 'check_downtime-cont'}]},    %% output port pointing to 'check_downtime-cont' pipe
-                {with, [{evict_every, 3600000}]}
-            ]}
-        ]},
-
         %% For windows, split up the parent flow and insert window flow
         {window, [
             {'stabilizer_win', [
@@ -112,19 +99,16 @@ Where:
 * Res1/2/3/4 - map of results, if any any generated, eg. [{output_sink, Val}], or []
 * AuditLog3 - audit log on filters, transformers, branches, boxes, windows
 
+Other examples
+--------------
+
+For more examples, check out [test/dribble_examples_SUITER.erl](https://github.com/konrads/dribble/blob/master/test/dribble_examples_SUITE.erl).
+
 
 Implementation
 --------------
 
 Pipes, branches, transforms and filters have a 1-to-1 mapping with beam constructs.
-
-Generic `boxes` require additional internal flows:
-``` erlang
-    {'populate_parent-data_in',  internal, [{transform, 'enqueue', {fn, BoxEnqueue}},
-                                            {branch, ['populate_parent-data_out']}]},
-    {'populate_parent-data_out', internal, [{filter, 'is_data_out', {fn, PortMatches(data_out)}},
-                                            {branch, ['check_downtime-cont']}]},
-```
 
 `windows` require new flows and re-wiring of 'stabilizer' flow:
 ``` erlang

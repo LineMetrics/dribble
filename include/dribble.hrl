@@ -1,5 +1,11 @@
+-record(dribble_runtime, {
+    generic = dribble_maps:new(),
+    plugins = dribble_maps:new(),
+    sinks   = dribble_maps:new()
+}).
+
 -record(dribble_ctx, {
-    generic = dict:new(),
-    plugins = dict:new(),
-    sinks   = dict:new()
+    public = [],
+    beam,
+    runtime = #dribble_runtime{}
 }).

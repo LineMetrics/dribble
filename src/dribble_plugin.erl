@@ -2,4 +2,4 @@
 
 -include("dribble_int.hrl").
 
--callback rewire(plugin(), plugin_impl(), plugin_def(), flow_id(), [flow()]) -> [flow()].
+-callback rewire(plugin_ref(), plugin_spec(), flow_id(), [flow()]) -> [flow()].
