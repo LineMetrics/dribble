@@ -7,7 +7,7 @@ A CEP library with an OTP application layer. Based on:
 * [beam-erl v0.2.0](https://github.com/darach/beam-erl/tree/v0.2.0/src)
 * [eep-erl](https://github.com/darach/eep-erl)
 
-As a libary, *dribble* facilitates construction of algorithms via DSL. An algorithm is implemented by a single beam flow, and consisting of beam filters|transforms|branches and more complex constructs - `boxes`. A `box` provides a runtime behaviour that manipulates stream events and `box` context (partition of beam_flow context), wrapped up in a beam sub-flow. Common `box` implementations such as eep `windows` are promoted to first class *dribble* citizens by implementing a plugin behaviour that defines custom DSL and auto wire-up functionality.
+As a libary, *dribble* facilitates construction of algorithms via DSL. An algorithm is implemented by a single beam flow, and consisting of beam filters|transforms|branches and more complex constructs - `plugins`. A `plugin` provides a runtime behaviour that manipulates stream events and `plugin` context (partition of beam_flow context), wrapped up in a beam sub-flow. Common `plugin` implementations such as eep `windows` are promoted to first class *dribble* citizens by implementing a plugin behaviour that defines custom DSL and auto wire-up functionality.
 
 As an OTP application, *dribble* provides a thin process layer to manage algorithms, expose public endpoints, drive eep `window` clock ticks. Further functionality - to be considered...
 
@@ -97,7 +97,7 @@ application:start(dribble),
 
 Where:
 * Res1/2/3/4 - map of results, if any any generated, eg. [{output_sink, Val}], or []
-* AuditLog3 - audit log on filters, transformers, branches, boxes, windows
+* AuditLog3 - audit log on filters, transformers, branches, windows
 
 Other examples
 --------------
@@ -126,17 +126,15 @@ Pipes, branches, transforms and filters have a 1-to-1 mapping with beam construc
 
 Algorithm construction requires multiple passes, eg.
 * determine used plugins
-* generate all beam pipes, for both flows and `boxes`(/`windows`)
-* fill in in all pipes, generic or `box`
+* generate all beam pipes, for both flows and `windows`
+* fill in in all pipes, generic or `window`
 * validate no cyclic graphs, no dead ends
 
-`box`(/`window`) construction is delegated to dribble_plugin_box(/dribble_plugin_window). Flows, which drive the entire construction, get a preferential treatment and hence differ from plugins.
+`window` construction is delegated to dribble_plugin_window. Flows, which drive the entire construction, get a preferential treatment and hence differ from plugins.
 
 
 TBD
 ---
-
-Rename `boxes` to represent pluggable units of work...
 
 Clock ticks in OTP app - should they be part of algorithm, driven externally?
 
