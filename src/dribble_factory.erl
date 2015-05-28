@@ -65,7 +65,9 @@ resolve_plugin(Plugin, PluginDefs) ->
 
 sink_transform(SinkId) ->
     fun(X, #dribble_runtime{sinks=Sinks}=Runtime) ->
-        Sinks2 = dribble_maps:put(SinkId, X, Sinks),
+        Sinked = dribble_maps:get(SinkId, Sinks, []),
+        Sinked2 = Sinked ++ [X],
+        Sinks2 = dribble_maps:put(SinkId, Sinked2, Sinks),
         Res = {sinked,SinkId},
         {Res, Runtime#dribble_runtime{sinks=Sinks2}}
     end.

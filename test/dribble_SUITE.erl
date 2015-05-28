@@ -1,6 +1,6 @@
 -module(dribble_SUITE).
 
--inslude("../include/dribble.hrl").
+-include("../src/dribble_int.hrl").
 -include_lib("common_test/include/ct.hrl").
 
 -compile(export_all).
@@ -13,7 +13,9 @@ groups() ->
     [
         {util, [], [
             t_replace,
-            t_enum_map
+            t_enum_map,
+            t_enum_filter,
+            t_enum_foldl
         ]},
         {validator, [], [
             t_validate_implements,
@@ -32,7 +34,13 @@ t_replace(_Config) ->
     [1,c,3] = dribble_util:replace(2, c, [1,2,3]). 
 
 t_enum_map(_Config) ->
-    [{1,a},{2,b},{3,c}] = dribble_util:enum_map(fun(Ind, X) -> {Ind, X} end, [a,b,c]).
+    [{1,a},{2,b},{3,c}] = dribble_util:enum_map(fun({Ind, X}) -> {Ind, X} end, [a,b,c]).
+
+t_enum_filter(_Config) ->
+    [a,c] = dribble_util:enum_filter(fun({Ind, _}) -> Ind =/= 2 end, [a,b,c]).
+
+t_enum_foldl(_Config) ->
+    "1a2b3c" = dribble_util:enum_foldl(fun({Ind, X}, Acc) -> ?format("~s~b~p", [Acc, Ind, X]) end, [], [a,b,c]).
 
 t_validate_implements(_Config) ->
     ok = dribble_validator:validate_implements(user_sup, supervisor_bridge),
@@ -107,4 +115,4 @@ t_to_beam(_Config) ->
     },
     Ctx = dribble:new(Algo),
     {[], Ctx2} = dribble:push(Ctx, in, 5),
-    {[{out_pass, 4}, {out_multiplied, 40}], _Ctx3} = dribble:push(Ctx2, in, 4).
+    {[{out_pass, [4]}, {out_multiplied, [40]}], _Ctx3} = dribble:push(Ctx2, in, 4).

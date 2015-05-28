@@ -4,6 +4,8 @@
     replace/3,
     replace_in_flows/4,
     enum_map/2,
+    enum_filter/2,
+    enum_foldl/3,
     heads_and_last/1]).
 
 replace(X1, X2, List) ->
@@ -20,8 +22,22 @@ replace_in_flows(PipeElem1, PipeElem2, FlowId, Flows) ->
     Flow2 = {FlowId, Vis, Pipe2},
     dribble_util:replace(Flow, Flow2, Flows).
 
-enum_map(F, List) when is_function(F, 2), is_list(List) ->
-    [ F(Ind, X) || {Ind, X} <- lists:zip(lists:seq(1, length(List)), List) ].
+enum_map(F, List) when is_function(F, 1), is_list(List) ->
+    lists:map(
+        F,
+        lists:zip(lists:seq(1, length(List)), List)).
+
+enum_filter(F, List) when is_function(F, 1), is_list(List) ->
+    Filtered = lists:filter(
+        F,
+        lists:zip(lists:seq(1, length(List)), List)),
+    {_, Vals} = lists:unzip(Filtered),
+    Vals.
+
+enum_foldl(F, Acc, List) when is_function(F, 2), is_list(List) ->
+    lists:foldl(F,
+        Acc,
+        lists:zip(lists:seq(1, length(List)), List)).
 
 heads_and_last([]) -> {[], undefined};
 heads_and_last(L) ->

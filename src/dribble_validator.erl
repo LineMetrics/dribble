@@ -25,9 +25,9 @@ pre_validate({algorithm, {flows, Flows}, {plugin_defs, PluginDefs}}) ->
         begin
             Length = length(Pipe),
             dribble_util:enum_map(
-                fun(Ind, {branch, _}=B) when Ind =/= Length -> throw({not_last_in_pipe,B});
-                   (Ind, {sink, _}=S) when Ind =/= Length -> throw({not_last_in_pipe,S});
-                   (_, _) -> ok
+                fun({Ind, {branch, _}=B}) when Ind =/= Length -> throw({not_last_in_pipe,B});
+                   ({Ind, {sink, _}=S}) when Ind =/= Length -> throw({not_last_in_pipe,S});
+                   ({_, _}) -> ok
                 end,
                 Pipe)
         end
