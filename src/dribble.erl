@@ -24,7 +24,7 @@ push(#dribble_ctx{public=Public, beam=Beam, runtime=Runtime}=DribbleCtx, PipeLab
         true ->
             {_Res, #dribble_runtime{sinks=Sinks}=Runtime2, Audit} = beam_flow:push(Beam, PipeLabel, Event, Runtime, ShouldAudit),
             % reset sinks
-            Runtime3 = Runtime2#dribble_runtime{sinks=dribble_maps:new()},
+            Runtime3 = Runtime2#dribble_runtime{sinks=[]},
             Ctx2 = DribbleCtx#dribble_ctx{runtime=Runtime3},
             {Sinks, Ctx2, Audit};
         false -> throw({non_public_pipe,PipeLabel})

@@ -44,4 +44,6 @@ build_pipe(Label, Pipe, Beam) ->
 beam_pipe_elem({beam_filter, As, {fn, Fun}}) -> beam_flow:filter(Fun, As);
 beam_pipe_elem({beam_filter, As, {mfa, M,F,A}}) -> beam_flow:filter(M, F, A, As);
 beam_pipe_elem({beam_transform, As, {fn, Fun}}) -> beam_flow:transform(Fun, As);
-beam_pipe_elem({beam_transform, As, {mfa, M,F,A}}) -> beam_flow:transform(M, F, A, As).
+beam_pipe_elem({beam_transform, As, {mfa, M,F,A}}) -> beam_flow:transform(M, F, A, As);
+beam_pipe_elem({beam_splitter, As, {fn, Fun}}) -> beam_flow:splitter(Fun, As);
+beam_pipe_elem({beam_splitter, As, {mfa, M,F,A}}) -> beam_flow:splitter(M, F, A, As).

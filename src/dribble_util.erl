@@ -6,7 +6,8 @@
     enum_map/2,
     enum_filter/2,
     enum_foldl/3,
-    heads_and_last/1]).
+    heads_and_last/1,
+    split/2]).
 
 replace(X1, X2, List) ->
     {Pre, Post} = lists:splitwith(fun(X) -> X =/= X1 end, List),
@@ -43,3 +44,10 @@ heads_and_last([]) -> {[], undefined};
 heads_and_last(L) ->
     [Last|T] = lists:reverse(L),
     {lists:reverse(T), Last}.
+
+split(X, List) when is_list(List) ->
+    {Pre, Post} = lists:splitwith(fun(Y) -> X =/= Y end, List),
+    case Post of
+        [] -> {Pre, []};
+        [_|T] -> {Pre, T}
+    end.

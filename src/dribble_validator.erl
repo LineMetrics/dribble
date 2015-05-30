@@ -4,6 +4,8 @@
     validate_implements/2,
     pre_validate/1]).
 
+-define(generic_pipe_elements, [filter, transform, branch, sink, splitter]).
+
 validate_implements(Mod, Behaviour) when is_atom(Mod), is_atom(Behaviour) ->
     case (catch proplists:get_value(behaviour, Mod:module_info(attributes), [])) of
         {'EXIT',{undef,_}} -> throw({undefined_module, Mod});
@@ -52,25 +54,51 @@ pre_validate({algorithm, {flows, Flows}, {plugin_defs, PluginDefs}}) ->
         [ internal ]         -> throw(no_public_flows);
         Other                -> throw({invalid_visibilities, Other})
     end,
+    % ensure that flow/plugin ids are unique
+    AllIds = lists:foldl(
+        fun({FlowId, _, Pipe}, Acc) ->
+            Plugins = lists:filter(
+                fun(PipeElem) ->
+                    not lists:member(element(1, PipeElem), ?generic_pipe_elements) 
+                end,
+                Pipe),
+            PluginIds = [ element(2, P) || P <- Plugins ],
+            Acc ++ [FlowId | PluginIds]
+        end,
+        [],
+        Flows),
+    case AllIds -- lists:usort(AllIds) of
+        [] -> ok;
+        DuplicateIds -> throw({duplicate_ids,DuplicateIds})
+    end,
+    % FIXME: validate plugin defs
     ok;
 pre_validate(AlgoWannabe) -> throw({invalid_algo,AlgoWannabe}).
 
 
 validate_pipe_elem({filter, _Label, {fn, Fun}}, _) when is_function(Fun, 1); is_function(Fun, 2) -> ok;
-validate_pipe_elem({filter, _Label, {mfa, M,F,_A}}, _) when is_atom(M); is_atom(F) -> ok;
+validate_pipe_elem({filter, _Label, {mfa, M,F,A}}, _) when is_atom(M); is_atom(F); is_list(A) -> validate_mfa(M, F, A);
 validate_pipe_elem({transform, _Label, {fn, Fun}}, _) when is_function(Fun, 1); is_function(Fun, 2) -> ok;
-validate_pipe_elem({transform, _Label, {mfa, M,F,_A}}, _) when is_atom(M); is_atom(F) -> ok;
+validate_pipe_elem({transform, _Label, {mfa, M,F,A}}, _) when is_atom(M); is_atom(F); is_list(A) -> validate_mfa(M, F, A);
+validate_pipe_elem({splitter, _Label, {fn, Fun}}, _) when is_function(Fun, 1); is_function(Fun, 2) -> ok;
+validate_pipe_elem({splitter, _Label, {mfa, M,F,A}}, _) when is_atom(M); is_atom(F); is_list(A) -> validate_mfa(M, F, A);
 validate_pipe_elem({branch, List}, _) when is_list(List) -> ok;
 validate_pipe_elem({sink, _Sink}, _) -> ok;
-validate_pipe_elem(PluginRef, PluginDefs) when is_tuple(PluginRef) ->
-    Type = element(1, PluginRef),
-    Path = element(2, PluginRef),
-    case proplists:get_value(Type, PluginDefs) of
+validate_pipe_elem({plugin, Mod, Id}=PluginRef, PluginDefs) when is_tuple(PluginRef) ->
+    case proplists:get_value(Mod, PluginDefs) of
         undefined -> throw({undefined_plugin_type,PluginRef});
         Defs ->
-            case proplists:get_value(Path, Defs) of
+            case proplists:get_value(Id, Defs) of
                 undefined -> throw({undefined_plugin_path,PluginRef});
                 _ -> ok
             end
     end;
 validate_pipe_elem(Other, _) -> throw({unrecognized_pipe_element, Other}).
+
+validate_mfa(M, F, A) ->
+    Airity = length(A),
+    try
+        Exports = M:module_info(exports),
+        lists:member({F, Airity}, Exports)
+    catch error:undef -> false
+    end.

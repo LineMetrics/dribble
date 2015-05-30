@@ -21,15 +21,12 @@ resolve({algorithm, {flows,Flows}, {plugin_defs,PluginDefs}}) ->
     % map flow components to rewirables
     [ resolve_flow(F, PluginDefs) || F <- Flows ].
     
-
 rewire(Flows) ->
     case find_plugin_in_flows(Flows) of
-        none ->
-            Flows;
-        {FlowId, [{ref, Ref},
-                  {impl, ImplMod},
-                  {init_spec, InitSpec}]} ->
-            ImplMod:rewire(Ref, InitSpec, FlowId, Flows)
+        none -> Flows;
+        {FlowId, {plugin, PluginMod, PluginId, PluginSpec}} ->
+            Flows2 = PluginMod:rewire(PluginId, PluginSpec, FlowId, Flows),
+            rewire(Flows2)
     end.
 
 %% internal
@@ -44,30 +41,28 @@ resolve_pipe_element({transform, Label, Exec}, _PluginDefs) ->
 resolve_pipe_element({sink, SinkId}, _PluginDefs) ->
     {beam_transform, {sink, SinkId}, {fn, sink_transform(SinkId)}};
 resolve_pipe_element({branch, Branches}, _PluginDefs) when is_list(Branches) -> {beam_branch, Branches};
-resolve_pipe_element(Plugin, PluginDefs) ->
-    {Impl, InitSpec} = resolve_plugin(Plugin, PluginDefs),
-    {plugin, [{ref, Plugin}, {impl, Impl}, {init_spec, InitSpec}]}.
+resolve_pipe_element({plugin, PluginImpl, PluginId}, PluginDefs) ->
+    InitSpec = resolve_plugin_spec(PluginImpl, PluginId, PluginDefs),
+    {plugin, PluginImpl, PluginId, InitSpec}.
 
-resolve_plugin(Plugin, PluginDefs) ->
-    Type = element(1, Plugin),
-    Id   = element(2, Plugin),
-    Impl = ?format_atom("dribble_plugin_~p", [Type]),
+resolve_plugin_spec(Impl, Id, PluginDefs) ->
+    % FIXME: needs to go back to validator
     case (catch Impl:module_info()) of
         {'EXIT', {undef, _}} -> throw({plugin_unknown, Impl});
         _ ->
             dribble_validator:validate_implements(Impl, dribble_plugin),
-            Def = proplists:get_value(Type, PluginDefs, []),
+            Def = proplists:get_value(Impl, PluginDefs, []),
             case proplists:get_value(Id, Def) of
-                undefined -> throw({plugin_undefined,Type,Id});
-                InitSpec -> {Impl, InitSpec}
+                undefined -> throw({plugin_undefined,Impl,Id});
+                InitSpec -> InitSpec
             end
     end.
 
 sink_transform(SinkId) ->
     fun(X, #dribble_runtime{sinks=Sinks}=Runtime) ->
-        Sinked = dribble_maps:get(SinkId, Sinks, []),
+        Sinked = kvlists:get_value(SinkId, Sinks, []),
         Sinked2 = Sinked ++ [X],
-        Sinks2 = dribble_maps:put(SinkId, Sinked2, Sinks),
+        Sinks2 = kvlists:set_value(SinkId, Sinked2, Sinks),
         Res = {sinked,SinkId},
         {Res, Runtime#dribble_runtime{sinks=Sinks2}}
     end.
@@ -87,12 +82,12 @@ wrap_ctx({mfa, _M,_F,_A}) ->
     throw('unimplemented, needs a beam_flow conversion func for ctx param'). 
 
 find_plugin_in_flows([]) -> none;
-find_plugin_in_flows([{_Label, _Vis, Pipe} | Rest]) ->
+find_plugin_in_flows([{FlowId, _Vis, Pipe} | Rest]) ->
     case find_plugin_in_pipe(Pipe) of
         none -> find_plugin_in_flows(Rest);
-        Plugin -> Plugin
+        Plugin -> {FlowId, Plugin}
     end.
 
 find_plugin_in_pipe([]) -> none;
-find_plugin_in_pipe([{plugin, _}=Plugin | _]) -> Plugin;
+find_plugin_in_pipe([{plugin, _, _, _}=Plugin | _]) -> Plugin;
 find_plugin_in_pipe([_ | Rest]) -> find_plugin_in_pipe(Rest).

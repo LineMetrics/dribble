@@ -9,8 +9,11 @@
 -type flow()        :: any().  %% FIXME: more detail needed
 -type label()       :: any().
 -type flow_id()     :: any().
+-type plugin_id()   :: any().
 -type plugin_impl() :: atom().
-
 -type plugin_ref()  :: {plugin_type(), label()} | {plugin_type(), label(), any()}.
+-type plugin()      :: {plugin, plugin_ref(), {impl, plugin_impl()}, {init_spec, proplists:proplist()}}.
+-type audit()       :: any().  %% FIXME: more detail needed
+
 -type plugin_spec() :: any().
 -type algo()        :: {algorithm, [flow()]}.

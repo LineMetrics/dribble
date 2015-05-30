@@ -2,4 +2,5 @@
 
 -include("dribble_int.hrl").
 
--callback rewire(plugin_ref(), plugin_spec(), flow_id(), [flow()]) -> [flow()].
+-callback filter_audit([audit()]) -> [audit()].
+-callback rewire(plugin_id(), plugin_spec(), flow_id(), [flow()]) -> [flow()].

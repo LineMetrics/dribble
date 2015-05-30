@@ -1,7 +1,7 @@
 -record(dribble_runtime, {
-    generic = dribble_maps:new(),
-    plugins = dribble_maps:new(),
-    sinks   = dribble_maps:new()
+    generic = [],
+    plugins = [],
+    sinks   = []
 }).
 
 -record(dribble_ctx, {
