@@ -4,13 +4,7 @@
 
 -behaviour(dribble_plugin).
 
--export([filter_audit/1, rewire/4]).
-
-filter_audit(_Audits) ->
-    % convert:
-    % - FlowId -> {window, {in, pre:in}, {out, post:out}, {ctx: pre:ctx}}
-    % - WindowId: {window-tick, {in, pre:tick}, {out, post:out}, {ctx: pre:tick}}
-    throw(unimplemented).
+-export([rewire/4]).
 
 %% split up flow into:
 %% - FlowId: pre ++ [enqueue_splitter] ++ post
