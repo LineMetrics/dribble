@@ -17,3 +17,10 @@
 
 -type plugin_spec() :: any().
 -type algo()        :: {algorithm, [flow()]}.
+
+-record(agg_ctx, {
+    acc_cb,
+    comp_cb,
+    emit_cb,
+    state=[]
+}).

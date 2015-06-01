@@ -12,22 +12,25 @@
     compensate/2,
     emit/1]).
 
-init({AccCb, CompCb, EmitCb, _InitAggCtx}=Ctx) 
-    when is_function(AccCb, 2),
+init(#agg_ctx{acc_cb=AccCb, comp_cb=CompCb, emit_cb=EmitCb}=Ctx)
+    when (AccCb  == undefined orelse is_function(AccCb, 2)),
          (CompCb == undefined orelse is_function(CompCb, 2)),
          (EmitCb == undefined orelse is_function(EmitCb, 1)) -> Ctx.
 init() -> throw(not_supported). % must use seedable aggregate
 
-accumulate({AccCb, CompCb, EmitCb, AggCtx}, Event) ->
-    AggCtx2 = AccCb(AggCtx, Event),
-    {AccCb, CompCb, EmitCb, AggCtx2}.
+accumulate(#agg_ctx{acc_cb=undefined, state=State}=Ctx, Event) when is_list(State) ->
+    Ctx#agg_ctx{state=State++[Event]};
+accumulate(#agg_ctx{acc_cb=AccCb, state=State}=Ctx, Event) ->
+    Ctx#agg_ctx{state=AccCb(State, Event)}.
 
-compensate({_, undefined, _, _}=Ctx, _Event) -> Ctx;
-compensate({AccCb, CompCb, EmitCb, AggCtx}, Event) ->
-    AggCtx2 = CompCb(AggCtx, Event),
-    {AccCb, CompCb, EmitCb, AggCtx2}.
+compensate(#agg_ctx{comp_cb=undefined, state=[]}=Ctx, _Event) ->
+    Ctx;
+compensate(#agg_ctx{comp_cb=undefined, state=[_H|T]}=Ctx, _Event) ->
+    Ctx#agg_ctx{state=T};
+compensate(#agg_ctx{comp_cb=CompCb, state=State}=Ctx, Event) ->
+    Ctx#agg_ctx{state=CompCb(State, Event)}.
 
-emit({_, _, undefined, AggCtx}) -> AggCtx;
-emit({_, _, EmitCb, AggCtx}) ->
-    EmitCb(AggCtx).
-
+emit(#agg_ctx{emit_cb=undefined, state=State}) ->
+    [State];
+emit(#agg_ctx{emit_cb=EmitCb, state=State}) ->
+    EmitCb(State).

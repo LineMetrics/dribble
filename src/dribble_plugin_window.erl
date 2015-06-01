@@ -16,21 +16,20 @@ filter_audit(_Audits) ->
 %% - FlowId: pre ++ [enqueue_splitter] ++ post
 %% - WindowId: [tick_splitter] ++ post
 rewire(WindowId, PluginSpec, FlowId, Flows) ->
-    Size = get_or_die(size, PluginSpec),
-    {fn, AccCb}  = get_or_die(accumulate, PluginSpec),
-    {fn, CompCb} = kvlists:get_value(compensate, PluginSpec, {fn, undefined}),  % optional
-    {fn, EmitCb} = kvlists:get_value(emit, PluginSpec, {fn, undefined}),        % optional
-    InitCtx = get_or_die(init_ctx, PluginSpec),
     Type = get_or_die(type, PluginSpec),
     Axis = get_or_die(axis, PluginSpec),
-    {fn, GroupBy} = kvlists:get_value(group_by, PluginSpec),
-    AggSeed = {AccCb, CompCb, EmitCb, InitCtx},
+    {fn, AccCb}   = kvlists:get_value(accumulate, PluginSpec, {fn, undefined}),  % optional
+    {fn, CompCb}  = kvlists:get_value(compensate, PluginSpec, {fn, undefined}),  % optional
+    {fn, EmitCb}  = kvlists:get_value(emit, PluginSpec, {fn, undefined}),        % optional
+    {fn, GroupBy} = kvlists:get_value(group_by, PluginSpec, {fn, undefined}),    % optional
+    InitCtx       = kvlists:get_value(init_ctx, PluginSpec, []),                 % optional
+    AggSeed = #agg_ctx{acc_cb=AccCb, comp_cb=CompCb, emit_cb=EmitCb, state=InitCtx},
 
-    {WinMod, InitWinCtx} = instantiate(Type, Axis, Size, AggSeed, PluginSpec),
+    {WinMod, InitWinCtx} = instantiate(Type, Axis, AggSeed, PluginSpec),
 
     GetCtxPath = fun(Event) ->
         case GroupBy of
-            undefined -> [window, WindowId];
+            undefined -> [window, WindowId, default];
             _ -> [window, WindowId, GroupBy(Event)]
         end
     end,
@@ -90,22 +89,26 @@ win_results({emit, Val}) -> Val;
 win_results(Vals) when is_list(Vals) ->
     [ V || {emit, V} <- Vals ].
 
-instantiate(sliding, event, Size, AggSeed, _PluginSpec) ->
+instantiate(sliding, event, AggSeed, PluginSpec) ->
+    Size = get_or_die(size, PluginSpec),
     {dribble_window_sliding_event,
      dribble_window_sliding_event:new(Size, dribble_plugin_window_agg, AggSeed)};
-instantiate(tumbling, event, Size, AggSeed, _PluginSpec) ->
+instantiate(tumbling, event, AggSeed, PluginSpec) ->
+    Size = get_or_die(size, PluginSpec),
     {dribble_window_tumbling_event,
      dribble_window_tumbling_event:new(Size, dribble_plugin_window_agg, AggSeed)};
-instantiate(sliding, time, Size, AggSeed, PluginSpec) ->
-    ClockMod = get_or_die(clock_mod, PluginSpec),
+instantiate(sliding, time, AggSeed, PluginSpec) ->
+    TocksPerInterval = kvlists:get_value(tocks_per_interval, PluginSpec, 1),
+    ClockMod = kvlists:get_value(clock_mod, PluginSpec, eep_clock_wall),
     ClockInterval = get_or_die(clock_interval, PluginSpec),
     {dribble_window_sliding_time,
-     dribble_window_tumbling_event:new(Size, dribble_plugin_window_agg, AggSeed, ClockMod, ClockInterval)};
-instantiate(tumbling, time, Size, AggSeed, PluginSpec) ->
-    ClockMod = get_or_die(clock_mod, PluginSpec),
+     dribble_window_sliding_time:new(TocksPerInterval, dribble_plugin_window_agg, AggSeed, ClockMod, ClockInterval)};
+instantiate(tumbling, time, AggSeed, PluginSpec) ->
+    TocksPerInterval = kvlists:get_value(tocks_per_interval, PluginSpec, 1),
+    ClockMod = kvlists:get_value(clock_mod, PluginSpec, eep_clock_wall),
     ClockInterval = get_or_die(clock_interval, PluginSpec),
-    {dribble_window_sliding_time,
-     dribble_window_tumbling_event:new(Size, dribble_plugin_window_agg, AggSeed, ClockMod, ClockInterval)}.
+    {dribble_window_tumbling_time,
+     dribble_window_tumbling_time:new(TocksPerInterval, dribble_plugin_window_agg, AggSeed, ClockMod, ClockInterval)}.
 
 get_or_die(Key, PluginSpec) ->
     case kvlists:get_value(Key, PluginSpec) of

@@ -7,6 +7,8 @@
     new/1,
     push/3,
     push/4,
+    tick/2,
+    tick/3,
     filter_audit/2,
     filter_audit/3]).
 
@@ -15,7 +17,7 @@
 
 new(Algo) -> dribble_factory:to_beam(Algo).
 
-push(#dribble_ctx{}=DribbleCtx, PipeLabel, Event) ->
+push(DribbleCtx, PipeLabel, Event) ->
     {Sinks, Runtime, []} = push(DribbleCtx, PipeLabel, Event, false),
     {Sinks, Runtime}.
 
@@ -29,6 +31,18 @@ push(#dribble_ctx{public=Public, beam=Beam, runtime=Runtime}=DribbleCtx, PipeLab
             {Sinks, Ctx2, Audit};
         false -> throw({non_public_pipe,PipeLabel})
     end.
+
+tick(DribbleCtx, TickLabel) ->
+    {Sinks, Runtime, []} = tick(DribbleCtx, TickLabel, false),
+    {Sinks, Runtime}.
+
+tick(#dribble_ctx{beam=Beam, runtime=Runtime}=DribbleCtx, TickLabel, ShouldAudit) ->
+      % FIXME: validate it's a window
+      {_Res, #dribble_runtime{sinks=Sinks}=Runtime2, Audit} = beam_flow:push(Beam, TickLabel, tick, Runtime, ShouldAudit),
+      % reset sinks
+      Runtime3 = Runtime2#dribble_runtime{sinks=[]},
+      Ctx2 = DribbleCtx#dribble_ctx{runtime=Runtime3},
+      {Sinks, Ctx2, Audit}.
 
 filter_audit(Audit, Filters) ->
     % validate params

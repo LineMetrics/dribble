@@ -7,7 +7,7 @@
 
 -define(to_algo(Pipe), {algorithm, {flows, [{a, public, Pipe}]}, {plugin_defs, []}}).
 
-all() -> [ {group, util}, {group, validator}, {group, factory}, {group, window} ].
+all() -> [ {group, util}, {group, validator}, {group, factory} ].
 
 groups() ->
     [
@@ -24,10 +24,6 @@ groups() ->
         {factory, [], [
             t_resolve,
             t_to_beam
-        ]},
-        {window, [], [
-            t_window_sliding_event,
-            t_window_tumbling_event
         ]}
     ].
 
@@ -69,7 +65,7 @@ t_pre_validate(_Config) ->
     {undefined_plugin_path,{plugin,some_plugin,undefined_plugin_path}} = (catch dribble_validator:pre_validate(InvalidPluginPath)),
     DuplicateFlowIds = {algorithm, {flows, [{a, public, []}, {a, internal, []}]}, {plugin_defs, []}},
     {duplicate_ids,[a]} = (catch dribble_validator:pre_validate(DuplicateFlowIds)),
-    DuplicateFlowPluginIds = {algorithm, {flows, [{aa, public, [{plugin, aa, bb}]}]}, {plugin_defs, [{aa, [{bb, []}]}]}},
+    DuplicateFlowPluginIds = {algorithm, {flows, [{aa, public, [{plugin, p1, aa}]}]}, {plugin_defs, [{p1, [{aa, []}]}]}},
     {duplicate_ids,[aa]} = (catch dribble_validator:pre_validate(DuplicateFlowPluginIds)).
 
 t_resolve(_Config) ->
@@ -124,85 +120,3 @@ t_to_beam(_Config) ->
     Ctx = dribble:new(Algo),
     {[], Ctx2} = dribble:push(Ctx, in, 5),
     {[{out_pass, [4]}, {out_multiplied, [40]}], _Ctx3} = dribble:push(Ctx2, in, 4).
-
-t_window_sliding_event(_Config) ->
-    GroupBy = fun({Group, _Val}) -> Group end,
-    Acc   = fun(Ctx, {_Group, Val}) -> Ctx++[Val] end,
-    Stats = fun(Ctx) -> [mean(Ctx)] end,  % must get a list for splitter
-    Algo = {algorithm,
-        {flows, [
-            {in, public,
-                [{plugin, dribble_plugin_window, 'stabilizer_win'},
-                 {sink, 'out'}]
-            }
-        ]},
-        {plugin_defs, [
-            %% For windows, split up the parent flow and insert window flow
-            {dribble_plugin_window, [
-                {'stabilizer_win', [
-                    {type, sliding},
-                    {axis, event},
-                    {size, 2},
-                    {accumulate, {fn, Acc}},
-                    % {compensate, {fn, Comp}},
-                    {emit, {fn, Stats}},
-                    {init_ctx, []},
-                    {group_by, {fn, GroupBy}}
-                ]}
-            ]}
-        ]}
-    },
-    Ctx = dribble:new(Algo),
-    {[], Ctx2} = dribble:push(Ctx, in, {id1, 1}), 
-    {[], Ctx3} = dribble:push(Ctx2, in, {id2, 10}), 
-    {[{out,[1.5]}], Ctx4} = dribble:push(Ctx3, in, {id1, 2}),   % emit id1
-    {[{out,[2.0]}], Ctx5} = dribble:push(Ctx4, in, {id1, 3}),   % emit id1
-    {[{out,[15.0]}], Ctx6} = dribble:push(Ctx5, in, {id2, 20}), % emit id2
-    {[{out,[2.5]}], _Ctx7} = dribble:push(Ctx6, in, {id1, 4}).  % emit id1
-
-t_window_tumbling_event(_Config) ->
-    GroupBy = fun({Group, _Val}) -> Group end,
-    Acc   = fun(Ctx, {_Group, Val}) -> Ctx++[Val] end,
-    Stats = fun(Ctx) -> [mean(Ctx)] end,  % must get a list for splitter
-    Algo = {algorithm,
-        {flows, [
-            {in, public,
-                [{plugin, dribble_plugin_window, 'stabilizer_win'},
-                 {sink, 'out'}]
-            }
-        ]},
-        {plugin_defs, [
-            %% For windows, split up the parent flow and insert window flow
-            {dribble_plugin_window, [
-                {'stabilizer_win', [
-                    {type, tumbling},
-                    {axis, event},
-                    {size, 2},
-                    {accumulate, {fn, Acc}},
-                    % {compensate, {fn, Comp}},
-                    {emit, {fn, Stats}},
-                    {init_ctx, []},
-                    {group_by, {fn, GroupBy}}
-                ]}
-            ]}
-        ]}
-    },
-    Ctx = dribble:new(Algo),
-    {[], Ctx2} = dribble:push(Ctx, in, {id1, 1}), 
-    {[], Ctx3} = dribble:push(Ctx2, in, {id2, 10}), 
-    {[{out,[1.5]}], Ctx4} = dribble:push(Ctx3, in, {id1, 2}),   % emit id1
-    {[], Ctx5} = dribble:push(Ctx4, in, {id1, 3}),   % emit id1
-    {[{out,[15.0]}], Ctx6} = dribble:push(Ctx5, in, {id2, 20}), % emit id2
-    {[{out,[3.5]}], _Ctx7} = dribble:push(Ctx6, in, {id1, 4}).  % emit id1
-
-%% internal
-mean(List) when is_list(List) ->
-    Sum = lists:foldl(
-        fun(X, Acc) -> Acc + X end,
-        0,
-        List),
-    Sum/length(List).
-
-median(List) when is_list(List) ->
-    Ind = length(List) div 2,
-    lists:nth(Ind, lists:sort(List)).

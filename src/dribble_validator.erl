@@ -4,8 +4,6 @@
     validate_implements/2,
     pre_validate/1]).
 
--define(generic_pipe_elements, [filter, transform, branch, sink, splitter]).
-
 validate_implements(Mod, Behaviour) when is_atom(Mod), is_atom(Behaviour) ->
     case (catch proplists:get_value(behaviour, Mod:module_info(attributes), [])) of
         {'EXIT',{undef,_}} -> throw({undefined_module, Mod});
@@ -57,12 +55,7 @@ pre_validate({algorithm, {flows, Flows}, {plugin_defs, PluginDefs}}) ->
     % ensure that flow/plugin ids are unique
     AllIds = lists:foldl(
         fun({FlowId, _, Pipe}, Acc) ->
-            Plugins = lists:filter(
-                fun(PipeElem) ->
-                    not lists:member(element(1, PipeElem), ?generic_pipe_elements) 
-                end,
-                Pipe),
-            PluginIds = [ element(2, P) || P <- Plugins ],
+            PluginIds = [ Id || {plugin, _Type, Id} <- Pipe ],
             Acc ++ [FlowId | PluginIds]
         end,
         [],
