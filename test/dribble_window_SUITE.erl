@@ -218,6 +218,48 @@ t_window_defaults(_Config) ->
     {[{out,[6.0]}], _Ctx7} = dribble:tick(Ctx6, slider).  % ((1+2)/2 + (10+11)/2)/2 = (1.5+10.5)/2
 
 
+t_window_time_counting_clock(_Config) ->
+    Mean = fun(Ctx) -> [mean(Ctx)] end,  % must get a list for splitter
+    Algo = {algorithm,
+        {flows, [
+            {'in', public,
+                [{plugin, dribble_plugin_window, 'tumbler'},
+                 {plugin, dribble_plugin_window, 'slider'},
+                 {sink, 'out'}]
+            }
+        ]},
+        {plugin_defs, [
+            {dribble_plugin_window, [
+                % minimum defaults required for tumbling time
+                {'tumbler', [
+                    {type, tumbling},
+                    {axis, time},
+                    {clock_interval, 1},
+                    {clock_mod, eep_clock_count},
+                    {emit, {fn, Mean}}
+                ]},
+                % minimum defaults required for sliding time
+                {'slider', [
+                    {type, tumbling},
+                    {axis, time},
+                    {clock_interval, 1},
+                    {clock_mod, eep_clock_count},
+                    {emit, {fn, Mean}}
+                ]}
+            ]}
+        ]}
+    },
+    Ctx = dribble:new(Algo),
+    % no sleeps required!
+    {[], Ctx2} = dribble:push(Ctx, in, 1),
+    {[], Ctx3} = dribble:push(Ctx2, in, 2),
+    {[], Ctx4} = dribble:push(Ctx3, in, 3),
+    {[], Ctx5} = dribble:tick(Ctx4, tumbler),
+    {[], Ctx6} = dribble:push(Ctx5, in, 100),
+    {[], Ctx7} = dribble:tick(Ctx6, tumbler),
+    {[{out,[51.0]}], _Ctx8} = dribble:tick(Ctx7, slider).  % ((1+2+3)/3 + 100)/2 = 51/2
+
+
 %% internal
 mean(List) when is_list(List) ->
     Sum = lists:foldl(
