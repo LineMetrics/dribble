@@ -7,7 +7,10 @@
     enum_filter/2,
     enum_foldl/3,
     heads_and_last/1,
-    split/2]).
+    split/2,
+    get_path/2,
+    get_path/3,
+    set_path/3]).
 
 replace(X1, X2, List) ->
     {Pre, Post} = lists:splitwith(fun(X) -> X =/= X1 end, List),
@@ -51,3 +54,20 @@ split(X, List) when is_list(List) ->
         [] -> {Pre, []};
         [_|T] -> {Pre, T}
     end.
+
+get_path([Key], List) -> proplists:get_value(Key, List);
+get_path([Key|T], List) ->
+    Child = proplists:get_value(Key, List, []),
+    get_path(T, Child).
+
+get_path(Path, List, Default) ->
+    case get_path(Path, List) of
+        undefined -> Default;
+        Other -> Other
+    end.
+
+set_path([Key], Val, List) -> lists:keystore(Key, 1, List, {Key, Val});
+set_path([Key|T], Val, List) ->
+    Child = proplists:get_value(Key, List, []),
+    Child2 = set_path(T, Val, Child),
+    lists:keystore(Key, 1, List, {Key, Child2}).

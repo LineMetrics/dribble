@@ -15,7 +15,8 @@ groups() ->
             t_replace,
             t_enum_map,
             t_enum_filter,
-            t_enum_foldl
+            t_enum_foldl,
+            t_set_get_path
         ]},
         {validator, [], [
             t_validate_implements,
@@ -45,6 +46,17 @@ t_enum_foldl(_Config) ->
 t_validate_implements(_Config) ->
     ok = dribble_validator:validate_implements(user_sup, supervisor_bridge),
     {behaviour_not_implemented,_,_} = (catch dribble_validator:validate_implements(?MODULE, blah)).
+
+t_set_get_path(_Config) ->
+  List = dribble_util:set_path(["abcd", {aaa}, 123], 111, []),
+  List2 = dribble_util:set_path(["abcd", {aaa}, 456], 222, List),
+  List3 = dribble_util:set_path(["abcd", ccc], 333, List2),
+  [{"abcd",[{{aaa},[{123,111},
+                    {456,222}]},
+            {ccc,333}]}] = List3,
+  111 = dribble_util:get_path(["abcd", {aaa}, 123], List3),
+  222 = dribble_util:get_path(["abcd", {aaa}, 456], List3),
+  333 = dribble_util:get_path(["abcd", ccc], List3).
 
 t_pre_validate(_Config) ->
     FilterFn = {fn, fun(_,_) -> ok end},

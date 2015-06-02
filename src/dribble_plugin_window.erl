@@ -21,20 +21,16 @@ rewire(WindowId, PluginSpec, FlowId, Flows) ->
 
     {WinMod, InitWinCtx} = instantiate(Type, Axis, AggSeed, PluginSpec),
 
-    GetCtxPath = fun(Event) ->
-        case GroupBy of
-            undefined -> [window, WindowId, default];
-            _ -> [window, WindowId, GroupBy(Event)]
-        end
-    end,
     Push = fun(Event, #dribble_runtime{plugins=P}=R) ->
-        CtxPath = GetCtxPath(Event),
-        WinCtx = case kvlists:get_path(CtxPath, P) of
-            [] -> InitWinCtx;
-            Other -> Other
+        % cannot kvlists:set_path, as it requires GroupId to be an atom...
+        GroupByKey = case GroupBy of
+            undefined -> default;
+            _ -> GroupBy(Event)
         end,
+        WinPath = [window, WindowId, GroupByKey],
+        WinCtx = dribble_util:get_path(WinPath, P, InitWinCtx),
         {Res, WinCtx2} = WinMod:push(WinCtx, Event),
-        P2 = kvlists:set_path(CtxPath, WinCtx2, P),
+        P2 = dribble_util:set_path(WinPath, WinCtx2, P),
         {win_results(Res), R#dribble_runtime{plugins=P2}}
     end,
     Tick = fun(_Event, #dribble_runtime{plugins=P}=R) ->

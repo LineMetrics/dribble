@@ -39,7 +39,7 @@ pre_validate({algorithm, {flows, Flows}, {plugin_defs, PluginDefs}}) ->
         [ Branches || {branch, Branches} <- Pipe ]
         || {_Label, _Vis, Pipe} <- Flows
     ]),
-    case BranchNames -- PipeNames of
+    case lists:usort(BranchNames) -- lists:usort(PipeNames) of
         [] -> ok;
         DanglingBranches -> throw({dangling_branches,DanglingBranches})
     end,
