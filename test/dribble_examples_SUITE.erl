@@ -85,7 +85,6 @@ t_lib_window(_Config) ->
                     {axis, time},
                     {clock_interval, 50},
                     {emit, {fn, fun last/1}},
-                    {init_ctx, []},
                     {group_by, {fn, fun group_by/1}}
                 ]}
             ]}
