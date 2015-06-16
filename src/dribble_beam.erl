@@ -21,8 +21,14 @@ build(Flows) ->
         end,
         Beam,
         Flows),
-    Public = [ Name || {Name, public, _Pipe} <- Flows ],
-    #dribble_ctx{public=Public, beam=Beam2}.
+    % build up metadata
+    Meta = lists:foldl(
+        fun({Name, Tags, _Pipe}, Meta0) ->
+            update_meta(Name, Tags, Meta0)
+        end,
+        [],
+        Flows),
+    #dribble_ctx{meta=Meta, beam=Beam2}.
 
 build_pipe(Label, Pipe, Beam) ->
     {PipeHeads, PipeLast} = dribble_util:heads_and_last(Pipe),
@@ -47,3 +53,12 @@ beam_pipe_elem({beam_transform, As, {fn, Fun}}) -> beam_flow:transform(Fun, As);
 beam_pipe_elem({beam_transform, As, {mfa, M,F,A}}) -> beam_flow:transform(M, F, A, As);
 beam_pipe_elem({beam_splitter, As, {fn, Fun}}) -> beam_flow:splitter(Fun, As);
 beam_pipe_elem({beam_splitter, As, {mfa, M,F,A}}) -> beam_flow:splitter(M, F, A, As).
+
+%% internals
+update_meta(_, [], Meta) -> Meta;
+update_meta(Name, [HTag|TTags], Meta) ->
+    Meta2 = update_meta(Name, HTag, Meta),
+    update_meta(Name, TTags, Meta2);
+update_meta(Name, Tag, Meta) ->
+    Classification = proplists:get_value(Tag, Meta, []),
+    lists:keystore(Tag, 1, Meta, {Tag, Classification++[Name]}).

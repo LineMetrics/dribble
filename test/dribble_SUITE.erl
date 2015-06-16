@@ -98,14 +98,14 @@ t_resolve(_Config) ->
                  {branch, ['stabilizer']}]
             },
             {'stabilizer', internal, 
-                [{plugin, dribble_plugin_window, 'stabilizer_win'},     %% auto re-wires 'stabilizer' to fit in the 'stabilizer_win'
+                [{plugin, dribble_window, 'stabilizer_win'},     %% auto re-wires 'stabilizer' to fit in the 'stabilizer_win'
                  {sink, 'output_sink'}]                         %% mandatory sink (must be at least 1)
             }
         ]},
 
         {plugin_defs, [
             %% For windows, split up the parent flow and insert window flow
-            {dribble_plugin_window, [
+            {dribble_window, [
                 {'stabilizer_win', [
                     {type, eep_window_tumbling},
                     {size, 30000},

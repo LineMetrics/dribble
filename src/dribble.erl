@@ -9,6 +9,8 @@
     push/4,
     tick/2,
     tick/3,
+    tick_all/1,
+    tick_all/2,
     filter_audit/2,
     filter_audit/3]).
 
@@ -21,7 +23,8 @@ push(DribbleCtx, PipeLabel, Event) ->
     {Sinks, Runtime, []} = push(DribbleCtx, PipeLabel, Event, false),
     {Sinks, Runtime}.
 
-push(#dribble_ctx{public=Public, beam=Beam, runtime=Runtime}=DribbleCtx, PipeLabel, Event, ShouldAudit) ->
+push(#dribble_ctx{meta=Meta, beam=Beam, runtime=Runtime}=DribbleCtx, PipeLabel, Event, ShouldAudit) ->
+    Public = proplists:get_value(public, Meta),
     case lists:member(PipeLabel, Public) of
         true ->
             {_Res, #dribble_runtime{sinks=Sinks}=Runtime2, Audit} = beam_flow:push(Beam, PipeLabel, Event, Runtime, ShouldAudit),
@@ -31,6 +34,21 @@ push(#dribble_ctx{public=Public, beam=Beam, runtime=Runtime}=DribbleCtx, PipeLab
             {Sinks, Ctx2, Audit};
         false -> throw({non_public_pipe,PipeLabel})
     end.
+
+tick_all(DribbleCtx) ->
+    {Sinks, DribbleCtx2, _} = tick_all(DribbleCtx, false),
+    {Sinks, DribbleCtx2}.
+
+tick_all(#dribble_ctx{meta=Meta}=DribbleCtx, ShouldAudit) ->
+    Tickables = proplists:get_value(tickables, Meta, []),
+    Sinks0 = Audits0 = [],
+    lists:foldl(
+        fun(Tickable, {SinksSoFar, Ctx, AuditSoFar}) ->
+            {Sinks, Ctx2, Audit} = tick(Ctx, Tickable, ShouldAudit),
+            {SinksSoFar++Sinks, Ctx2, AuditSoFar++Audit}
+        end,
+        {Sinks0, DribbleCtx, Audits0},
+        Tickables).
 
 tick(DribbleCtx, TickLabel) ->
     {Sinks, Runtime, []} = tick(DribbleCtx, TickLabel, false),

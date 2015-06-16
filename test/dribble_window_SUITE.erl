@@ -29,13 +29,13 @@ t_window_sliding_event(_Config) ->
     Algo = {algorithm,
         {flows, [
             {in, public,
-                [{plugin, dribble_plugin_window, 'stabilizer_win'},
+                [{plugin, dribble_window, 'stabilizer_win'},
                  {sink, 'out'}]
             }
         ]},
         {plugin_defs, [
             %% For windows, split up the parent flow and insert window flow
-            {dribble_plugin_window, [
+            {dribble_window, [
                 {'stabilizer_win', [
                     {type, sliding},
                     {axis, event},
@@ -63,13 +63,13 @@ t_window_tumbling_event(_Config) ->
     Algo = {algorithm,
         {flows, [
             {in, public,
-                [{plugin, dribble_plugin_window, 'stabilizer_win'},
+                [{plugin, dribble_window, 'stabilizer_win'},
                  {sink, 'out'}]
             }
         ]},
         {plugin_defs, [
             %% For windows, split up the parent flow and insert window flow
-            {dribble_plugin_window, [
+            {dribble_window, [
                 {'stabilizer_win', [
                     {type, tumbling},
                     {axis, event},
@@ -101,13 +101,13 @@ t_window_sliding_time(_Config) ->
     Algo = {algorithm,
         {flows, [
             {in, public,
-                [{plugin, dribble_plugin_window, 'stabilizer_win'},
+                [{plugin, dribble_window, 'stabilizer_win'},
                  {sink, 'out'}]
             }
         ]},
         {plugin_defs, [
             %% For windows, split up the parent flow and insert window flow
-            {dribble_plugin_window, [
+            {dribble_window, [
                 {'stabilizer_win', [
                     {type, sliding},
                     {axis, time},
@@ -146,13 +146,13 @@ t_window_tumbling_time(_Config) ->
     Algo = {algorithm,
         {flows, [
             {in, public,
-                [{plugin, dribble_plugin_window, 'stabilizer_win'},
+                [{plugin, dribble_window, 'stabilizer_win'},
                  {sink, 'out'}]
             }
         ]},
         {plugin_defs, [
             %% For windows, split up the parent flow and insert window flow
-            {dribble_plugin_window, [
+            {dribble_window, [
                 {'stabilizer_win', [
                     {type, tumbling},
                     {axis, time},
@@ -184,13 +184,13 @@ t_window_defaults(_Config) ->
     Algo = {algorithm,
         {flows, [
             {'in', public,
-                [{plugin, dribble_plugin_window, 'tumbler'},
-                 {plugin, dribble_plugin_window, 'slider'},
+                [{plugin, dribble_window, 'tumbler'},
+                 {plugin, dribble_window, 'slider'},
                  {sink, 'out'}]
             }
         ]},
         {plugin_defs, [
-            {dribble_plugin_window, [
+            {dribble_window, [
                 % minimum defaults required for tumbling event
                 {'tumbler', [
                     {type, tumbling},
@@ -223,13 +223,13 @@ t_window_time_counting_clock(_Config) ->
     Algo = {algorithm,
         {flows, [
             {'in', public,
-                [{plugin, dribble_plugin_window, 'tumbler'},
-                 {plugin, dribble_plugin_window, 'slider'},
+                [{plugin, dribble_window, 'tumbler'},
+                 {plugin, dribble_window, 'slider'},
                  {sink, 'out'}]
             }
         ]},
         {plugin_defs, [
-            {dribble_plugin_window, [
+            {dribble_window, [
                 % minimum defaults required for tumbling time
                 {'tumbler', [
                     {type, tumbling},

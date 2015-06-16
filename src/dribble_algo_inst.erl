@@ -1,11 +1,11 @@
--module (dribble_algo_instance).
+-module (dribble_algo_inst).
 
 -behaviour(gen_fsm).
 
 -include("dribble_int.hrl").
 
 -export([
-    start_link/2]).
+    start_link/3]).
 
 %% public api
 -export([
@@ -28,12 +28,13 @@
 
 -record(dribble_algo_instance_state, {
     id,
-    ctx
+    ctx,
+    should_audit
 }).
 
 %% Public API
-start_link(AlgoId, AlgoDsl) ->
-    gen_fsm:start_link(?MODULE, {AlgoId, AlgoDsl}, []).
+start_link(AlgoId, AlgoDsl, ShouldAudit) ->
+    gen_fsm:start_link(?MODULE, {AlgoId, AlgoDsl, ShouldAudit}, []).
 
 id(Pid) ->
     gen_fsm:sync_send_all_state_event(Pid, id). 
@@ -51,14 +52,14 @@ stop(Pid) ->
     gen_fsm:sync_send_event(Pid, stop).
 
 %% Callbacks
-init({AlgoId, AlgoDsl}) ->
+init({AlgoId, AlgoDsl, ShouldAudit}) ->
     % to register:
     % gproc:reg({p, l, dribble_algo}, AlgoId),
     
     % to lookup:
     % PidIds = gproc:lookup_values({p, l, algo_reg}),
     % Pids = [Pid || {Pid, P} <- PidsIds],
-    State = #dribble_algo_instance_state{id=AlgoId, ctx=dribble:new(AlgoDsl)},
+    State = #dribble_algo_instance_state{id=AlgoId, ctx=dribble:new(AlgoDsl), should_audit=ShouldAudit},
     {ok, stopped, State}.
 
 handle_sync_event(id, _, StateName, #dribble_algo_instance_state{id=Id}=State) ->
@@ -77,13 +78,12 @@ started(start, _, State) ->
     {reply, ok, started, State};
 started(stop, _, State) ->
     {reply, ok, stopped, State};
-started(tick, _, #dribble_algo_instance_state{ctx=Ctx}=State) ->
-    throw({unimplemented, tick_airity_1}),    % FIXME: implement!
-    Ctx2 = dribble:tick(Ctx),
+started(tick, _, #dribble_algo_instance_state{ctx=Ctx, should_audit=ShouldAudit}=State) ->
+    Ctx2 = dribble:tick_all(Ctx, ShouldAudit),
     State2 = State#dribble_algo_instance_state{ctx=Ctx2},
     {reply, ok, started, State2};
-started({push, Pipe, Event}, _, #dribble_algo_instance_state{ctx=Ctx}=State) ->
-    Ctx2 = dribble:push(Ctx, Pipe, Event),
+started({push, Pipe, Event}, _, #dribble_algo_instance_state{ctx=Ctx, should_audit=ShouldAudit}=State) ->
+    Ctx2 = dribble:push(Ctx, Pipe, Event, ShouldAudit),
     State2 = State#dribble_algo_instance_state{ctx=Ctx2},
     {reply, ok, started, State2};
 started(Req, _, State) ->

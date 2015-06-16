@@ -1,4 +1,4 @@
--module(dribble_plugin_window).
+-module(dribble_window).
 
 -include("dribble_int.hrl").
 
@@ -68,7 +68,7 @@ rewire(WindowId, PluginSpec, FlowId, Flows) ->
             WindowPipe =
                 [{beam_splitter, {window, WindowId, tick}, {fn, Tick}}] ++
                 PostPipe,
-            WindowFlow = {WindowId, public, WindowPipe},
+            WindowFlow = {WindowId, [public, tickable], WindowPipe},  % marking tags = public & tickable
             lists:keystore(WindowId, 1, Flows2, WindowFlow)
     end,
     Flows3.
@@ -82,23 +82,23 @@ win_results(Vals) when is_list(Vals) ->
 instantiate(sliding, event, AggSeed, PluginSpec) ->
     Size = get_or_die(size, PluginSpec),
     {dribble_window_sliding_event,
-     dribble_window_sliding_event:new(Size, dribble_plugin_window_agg, AggSeed)};
+     dribble_window_sliding_event:new(Size, dribble_window_agg, AggSeed)};
 instantiate(tumbling, event, AggSeed, PluginSpec) ->
     Size = get_or_die(size, PluginSpec),
     {dribble_window_tumbling_event,
-     dribble_window_tumbling_event:new(Size, dribble_plugin_window_agg, AggSeed)};
+     dribble_window_tumbling_event:new(Size, dribble_window_agg, AggSeed)};
 instantiate(sliding, time, AggSeed, PluginSpec) ->
     TocksPerInterval = kvlists:get_value(tocks_per_interval, PluginSpec, 1),
     ClockMod = kvlists:get_value(clock_mod, PluginSpec, eep_clock_wall),
     ClockInterval = get_or_die(clock_interval, PluginSpec),
     {dribble_window_sliding_time,
-     dribble_window_sliding_time:new(TocksPerInterval, dribble_plugin_window_agg, AggSeed, ClockMod, ClockInterval)};
+     dribble_window_sliding_time:new(TocksPerInterval, dribble_window_agg, AggSeed, ClockMod, ClockInterval)};
 instantiate(tumbling, time, AggSeed, PluginSpec) ->
     TocksPerInterval = kvlists:get_value(tocks_per_interval, PluginSpec, 1),
     ClockMod = kvlists:get_value(clock_mod, PluginSpec, eep_clock_wall),
     ClockInterval = get_or_die(clock_interval, PluginSpec),
     {dribble_window_tumbling_time,
-     dribble_window_tumbling_time:new(TocksPerInterval, dribble_plugin_window_agg, AggSeed, ClockMod, ClockInterval)}.
+     dribble_window_tumbling_time:new(TocksPerInterval, dribble_window_agg, AggSeed, ClockMod, ClockInterval)}.
 
 get_or_die(Key, PluginSpec) ->
     case kvlists:get_value(Key, PluginSpec) of

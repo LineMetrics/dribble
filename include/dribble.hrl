@@ -5,7 +5,7 @@
 }).
 
 -record(dribble_ctx, {
-    public = [],
+    meta = [],
     beam,
     runtime = #dribble_runtime{}
 }).

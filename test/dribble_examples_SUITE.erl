@@ -74,12 +74,12 @@ t_lib_window(_Config) ->
                 {transform, to_alert, {fn, ToOnlineAlert}},
                 {branch, [output]}]},
             {output, internal, [
-                {plugin, dribble_plugin_window, stabilizer_win},  %% stabilizing window before output
+                {plugin, dribble_window, stabilizer_win},  %% stabilizing window before output
                 {sink, out}
             ]}
         ]},
         {plugin_defs, [
-            {dribble_plugin_window, [
+            {dribble_window, [
                 {stabilizer_win, [  % stabilizer picks up the last event for group id
                     {type, tumbling},
                     {axis, time},

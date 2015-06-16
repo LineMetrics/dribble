@@ -1,4 +1,4 @@
--module(dribble_plugin_window_agg).
+-module(dribble_window_agg).
 
 -include("dribble_int.hrl").
 -include_lib("eep_app/include/eep_erl.hrl").
