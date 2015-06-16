@@ -6,7 +6,7 @@
 
 -export([
     start_link/2,
-    start_link/3]).
+    start_link/4]).
 
 %% public api
 -export([
@@ -30,16 +30,16 @@
 -record(dribble_algo_instance_state, {
     id,
     ctx,
-    auditor,
+    results_observer,
     should_audit
 }).
 
 %% Public API
 start_link(AlgoId, AlgoDsl) ->
-    gen_fsm:start_link(?MODULE, {AlgoId, AlgoDsl, dribble_auditor}, []).
+    start_link(AlgoId, AlgoDsl, dribble_results_observer, false).
 
-start_link(AlgoId, AlgoDsl, Auditor) ->
-    gen_fsm:start_link(?MODULE, {AlgoId, AlgoDsl, Auditor}, []).
+start_link(AlgoId, AlgoDsl, ResultsObserver, ShouldAudit) ->
+    gen_fsm:start_link(?MODULE, {AlgoId, AlgoDsl, ResultsObserver, ShouldAudit}, []).
 
 id(Pid) ->
     gen_fsm:sync_send_all_state_event(Pid, id). 
@@ -57,9 +57,8 @@ stop(Pid) ->
     gen_fsm:sync_send_event(Pid, stop).
 
 %% Callbacks
-init({AlgoId, AlgoDsl, Auditor}) ->
-    ShouldAudit = Auditor =/= undefined,
-    State = #dribble_algo_instance_state{id=AlgoId, ctx=dribble:new(AlgoDsl), auditor=Auditor, should_audit=ShouldAudit},
+init({AlgoId, AlgoDsl, ResultsObserver, ShouldAudit}) ->
+    State = #dribble_algo_instance_state{id=AlgoId, ctx=dribble:new(AlgoDsl), results_observer=ResultsObserver, should_audit=ShouldAudit},
     {ok, stopped, State}.
 
 handle_sync_event(id, _, StateName, #dribble_algo_instance_state{id=Id}=State) ->
@@ -68,7 +67,7 @@ handle_sync_event(_Event, _From, StateName, State) ->
     {next_state, StateName, State}.
 
 stopped(start, _, State) ->
-    audit(started, State),
+    notify(started, State),
     {reply, ok, started, State};
 stopped(stop, _, State) ->
     {reply, ok, stopped, State};
@@ -78,26 +77,26 @@ stopped(Req, _, State) ->
 started(start, _, State) ->
     {reply, ok, started, State};
 started(stop, _, State) ->
-    audit(stopped, State),
+    notify(stopped, State),
     {reply, ok, stopped, State};
 started(tick, _, #dribble_algo_instance_state{ctx=Ctx, should_audit=ShouldAudit}=State) ->
     try
         {SinkAudits, Ctx2} = dribble:tick_all(Ctx, ShouldAudit),
-        audit({ticked, SinkAudits}, State),
+        notify({ticked, SinkAudits}, State),
         State2 = State#dribble_algo_instance_state{ctx=Ctx2},
         {reply, ok, started, State2}
     catch throw:Err ->
-        audit({error, Err}, State),
+        notify({error, Err}, State),
         {reply, {error, Err}, started, State}
     end;
 started({push, Pipe, Event}, _, #dribble_algo_instance_state{ctx=Ctx, should_audit=ShouldAudit}=State) ->
     try
         {Sinks, Ctx2, Audit} = dribble:push(Ctx, Pipe, Event, ShouldAudit),
-        audit({pushed, Sinks, Audit}, State),
+        notify({pushed, Sinks, Audit}, State),
         State2 = State#dribble_algo_instance_state{ctx=Ctx2},
         {reply, ok, started, State2}
     catch throw:Err ->
-        audit({error, Err}, State),
+        notify({error, Err}, State),
         {reply, {error, Err}, started, State}
     end;
 started(Req, _, State) ->
@@ -109,5 +108,5 @@ terminate(_Reason, _StateName, _State) -> ok.
 code_change(_OldVsn, StateName, State, _Extra) -> {ok, StateName, State}.
 
 %% internals
-audit(Audit, #dribble_algo_instance_state{id=Id, auditor=Auditor}) ->
-    gen_event:notify(Auditor, {Id, Audit}).
+notify(Audit, #dribble_algo_instance_state{id=Id, results_observer=ResultsObserver}) ->
+    gen_event:notify(ResultsObserver, {Id, Audit}).
