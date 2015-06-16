@@ -9,7 +9,6 @@
     push/4,
     tick/2,
     tick/3,
-    tick_all/1,
     tick_all/2,
     filter_audit/2,
     filter_audit/3]).
@@ -35,19 +34,14 @@ push(#dribble_ctx{meta=Meta, beam=Beam, runtime=Runtime}=DribbleCtx, PipeLabel, 
         false -> throw({non_public_pipe,PipeLabel})
     end.
 
-tick_all(DribbleCtx) ->
-    {Sinks, DribbleCtx2, _} = tick_all(DribbleCtx, false),
-    {Sinks, DribbleCtx2}.
-
 tick_all(#dribble_ctx{meta=Meta}=DribbleCtx, ShouldAudit) ->
     Tickables = proplists:get_value(tickables, Meta, []),
-    Sinks0 = Audits0 = [],
     lists:foldl(
-        fun(Tickable, {SinksSoFar, Ctx, AuditSoFar}) ->
+        fun(Tickable, {SinkAudits, Ctx}) ->
             {Sinks, Ctx2, Audit} = tick(Ctx, Tickable, ShouldAudit),
-            {SinksSoFar++Sinks, Ctx2, AuditSoFar++Audit}
+            {SinkAudits++{Sinks, Audit}, Ctx2}
         end,
-        {Sinks0, DribbleCtx, Audits0},
+        {[], DribbleCtx},
         Tickables).
 
 tick(DribbleCtx, TickLabel) ->
