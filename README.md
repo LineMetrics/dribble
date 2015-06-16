@@ -47,12 +47,12 @@ Algo = {algorithm,
             {transform, to_alert, {fn, ToAlert("offline")}},
             {branch, [output]}]},
         {output, internal, [
-            {plugin, dribble_plugin_window, stabilizer_win},
+            {plugin, dribble_window, stabilizer_win},
             {sink, out}
         ]}
     ]},
     {plugin_defs, [
-        {dribble_plugin_window, [
+        {dribble_window, [
             {stabilizer_win, [
                 {type, tumbling},
                 {axis, time},
@@ -110,7 +110,7 @@ Algorithm construction requires multiple passes, eg.
 * fill in in all pipes, generic or `window`
 * validate no cyclic graphs, no dead ends
 
-`window` construction is delegated to dribble_plugin_window. Flows, which drive the entire construction, get a preferential treatment and hence differ from plugins.
+`window` construction is delegated to dribble_window. Flows, which drive the entire construction, get a preferential treatment and hence differ from plugins.
 
 
 TBD
